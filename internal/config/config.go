@@ -56,6 +56,7 @@ func MustLoad() Config {
 				time.Minute,
 			},
 		}
+		os.Mkdir("~/.local/share/yaus", 0755)
 		yaml, err := yaml.Marshal(config)
 		if err != nil {
 			log.Fatalf("cannot create data for config: %s", err)

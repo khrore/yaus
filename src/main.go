@@ -4,7 +4,8 @@ import (
 	"log/slog"
 	"os"
 	"yaus/internal/config"
-	postgresql "yaus/internal/storage/postgreSQL"
+	"yaus/internal/logger/sl"
+	"yaus/internal/storage/sqlite"
 )
 
 const (
@@ -20,9 +21,9 @@ func main() {
 	log.Info("starting yaus", slog.String("env", cfg.Env))
 	log.Debug("debug messages are enabled")
 
-	db, err := postgresql.New(cfg.DBPath)
+	db, err := sqlite.New(cfg.DBPath)
 	if err != nil {
-		log.Error("failed to init data base: %w", err.Error())
+		log.Error("failed to init data base", sl.Err(err))
 		os.Exit(1)
 	}
 
