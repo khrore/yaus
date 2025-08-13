@@ -4,8 +4,12 @@ import (
 	"log/slog"
 	"os"
 	"yaus/internal/config"
+	"yaus/internal/http-server/middleware/logger"
 	"yaus/internal/logger/sl"
 	"yaus/internal/storage/sqlite"
+
+	"github.com/go-chi/chi/middleware"
+	"github.com/go-chi/chi/v5"
 )
 
 const (
@@ -17,21 +21,25 @@ const (
 func main() {
 	cfg := config.MustLoad()
 
+	// logger
 	log := setupLogger(cfg.Env)
 	log.Info("starting yaus", slog.String("env", cfg.Env))
 	log.Debug("debug messages are enabled")
 
+	// sqlite setup
 	db, err := sqlite.New(cfg.DBPath)
 	if err != nil {
 		log.Error("failed to init data base", sl.Err(err))
 		os.Exit(1)
 	}
 
-	// db.SaveURL("https://google.com", "google")
-	// log.Debug("url saved")
-
 	_ = db
-	// init router: chi github.com/go-chi/chi
+
+	// router
+	router := chi.NewRouter()
+
+	router.Use(middleware.RequestID) // to better request handling
+	router.Use(logger.New(log))
 }
 
 func setupLogger(env string) *slog.Logger {
