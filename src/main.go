@@ -27,15 +27,8 @@ func main() {
 		os.Exit(1)
 	}
 
-	err = db.SaveURL("https://google.com", "google")
-	if err != nil {
-		log.Error("failed to save URL", sl.Err(err))
-	}
-
-	err = db.SaveURL("https://google.com", "google")
-	if err != nil {
-		log.Error("failed to save URL", sl.Err(err))
-	}
+	// db.SaveURL("https://google.com", "google")
+	// log.Debug("url saved")
 
 	_ = db
 	// init router: chi github.com/go-chi/chi
