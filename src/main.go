@@ -4,7 +4,7 @@ import (
 	"log/slog"
 	"os"
 	"yaus/internal/config"
-	"yaus/internal/http-server/middleware/logger"
+	mwLogger "yaus/internal/http-server/middleware/mvLogger"
 	"yaus/internal/logger/sl"
 	"yaus/internal/storage/sqlite"
 
@@ -39,7 +39,9 @@ func main() {
 	router := chi.NewRouter()
 
 	router.Use(middleware.RequestID) // to better request handling
-	router.Use(logger.New(log))
+	router.Use(mwLogger.New(log))
+	router.Use(middleware.Recoverer)
+	router.Use(middleware.URLFormat)
 }
 
 func setupLogger(env string) *slog.Logger {
