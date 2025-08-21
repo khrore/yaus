@@ -1,13 +1,5 @@
 package config
 
-// Default config
-// env: local
-// db_path: ~/.local/share/yaus/yaus.db
-// http_server:
-//     address: localhost:8082
-//     timeout: 4s
-//     idle_duration: 1m0s
-
 import (
 	"io"
 	"log"
@@ -31,6 +23,14 @@ type HTTPServer struct {
 	IdleTimeout time.Duration `yaml:"idle_duration" env:"YAUS_IDLE_TIMEOUT" env-required:"true"`
 }
 
+const (
+	DefaultEnv         = "local"
+	DefaultDBPath      = "~/.local/share/yaus/yaus.db"
+	DefaultAddress     = "localhost:8082"
+	DefaultTimeout     = 4 * time.Second
+	DefaultIdleTimeout = time.Minute
+)
+
 func MustLoad() Config {
 	configPath := os.Getenv("YAUS_CONFIG_PATH")
 	if configPath == "" {
@@ -48,15 +48,14 @@ func MustLoad() Config {
 	configFile := filepath.Join(configPath, "config.yaml")
 	if _, err := os.Stat(configFile); os.IsNotExist(err) {
 		config := Config{
-			"local",
-			"~/.local/share/yaus/yaus.db",
+			DefaultEnv,
+			DefaultDBPath,
 			HTTPServer{
-				"localhost:8082",
-				4 * time.Second,
-				time.Minute,
+				DefaultAddress,
+				DefaultTimeout,
+				DefaultIdleTimeout,
 			},
 		}
-		os.Mkdir("~/.local/share/yaus", 0755)
 		yaml, err := yaml.Marshal(config)
 		if err != nil {
 			log.Fatalf("cannot create data for config: %s", err)

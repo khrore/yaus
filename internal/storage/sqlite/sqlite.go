@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"yaus/internal/config"
 	"yaus/internal/storage"
 
 	"github.com/mattn/go-sqlite3"
@@ -22,8 +23,13 @@ func New(storagePath string) (*Storage, error) {
 		if err != nil {
 			log.Fatalf("%s: failed to get user path: %s", fnName, err)
 		}
+		_, err = os.Stat(storagePath)
+		if storagePath == config.DefaultDBPath && os.IsNotExist(err) {
+			os.Mkdir(homeDir+"/.local/share/yaus", 0755)
+		}
 		storagePath = homeDir + storagePath[1:]
 	}
+
 	db, err := sql.Open("sqlite3", storagePath)
 	if err != nil {
 		return nil, fmt.Errorf("%s: failed to open database: %w", fnName, err)
@@ -37,12 +43,12 @@ func New(storagePath string) (*Storage, error) {
 		CREATE INDEX IF NOT EXISTS idx_alias ON url(alias)
 		`)
 	if err != nil {
-		return nil, fmt.Errorf("%s: failed to create statement for database: %w", fnName, err)
+		return nil, fmt.Errorf("%s: failed to insert statement to database: %w", fnName, err)
 	}
 
 	_, err = stmt.Exec()
-	if err != err {
-		return nil, fmt.Errorf("%s: failed to insert statement to database: %w", fnName, err)
+	if err != nil {
+		return nil, fmt.Errorf("%s: failed to create database file: %w", fnName, err)
 	}
 
 	return &Storage{db}, nil
@@ -77,7 +83,6 @@ func (s *Storage) GetURL(alias string) (string, error) {
 
 	var resultURL string
 	err = stmt.QueryRow(alias).Scan(&resultURL)
-
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return "", fmt.Errorf("%s: failed to select url \"%s\" from database: %w", fnName, alias, storage.ErrURLNotFound)

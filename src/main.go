@@ -5,7 +5,7 @@ import (
 	"os"
 	"yaus/internal/config"
 	mwLogger "yaus/internal/http-server/middleware/mvLogger"
-	"yaus/internal/logger/sl"
+	"yaus/internal/lib/logger/sl"
 	"yaus/internal/storage/sqlite"
 
 	"github.com/go-chi/chi/middleware"
