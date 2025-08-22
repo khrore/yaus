@@ -42,17 +42,38 @@ func main() {
 	router.Use(mwLogger.New(log))
 	router.Use(middleware.Recoverer)
 	router.Use(middleware.URLFormat)
+
+	router.Route("/url", func(r chi.Router) {
+		r.Use(middleware.BasicAuth("yaus", map[string]string{
+			cfg.HTTPServer.User: cfg.HTTPServer.Password,
+		}))
+	})
 }
 
 func setupLogger(env string) *slog.Logger {
 	var log *slog.Logger
 	switch env {
 	case envLocal:
-		log = slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelDebug}))
+		log = setupPrettySlog()
 	case envDev:
 		log = slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelDebug}))
 	case envProd:
 		log = slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelInfo}))
+	default:
+		log = slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelInfo}))
+		log.Error("Invalid env variable in config! Expected local, dev or prod. Using prod config")
 	}
 	return log
+}
+
+func setupPrettySlog() *slog.Logger {
+	opts := sl.PrettyHandlerOptions{
+		SlogOpts: &slog.HandlerOptions{
+			Level: slog.LevelDebug,
+		},
+	}
+
+	handler := opts.NewPrettyLogger(os.Stdout)
+
+	return slog.New(handler)
 }

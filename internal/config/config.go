@@ -12,15 +12,17 @@ import (
 )
 
 type Config struct {
-	Env    string     `yaml:"env" env:"YAUS_ENV" env-required:"true"`
-	DBPath string     `yaml:"db_path" env:"YAUS_DB_PATH" env-required:"true"`
-	Server HTTPServer `yaml:"http_server"`
+	Env        string     `yaml:"env" env:"YAUS_ENV" env-required:"true"`
+	DBPath     string     `yaml:"db_path" env:"YAUS_DB_PATH" env-required:"true"`
+	HTTPServer HTTPServer `yaml:"http_server"`
 }
 
 type HTTPServer struct {
 	Address     string        `yaml:"address" env:"YAUS_ADDR" env-required:"true"`
 	Timeout     time.Duration `yaml:"timeout" env:"YAUS_TIMEOUT" env-required:"true"`
 	IdleTimeout time.Duration `yaml:"idle_duration" env:"YAUS_IDLE_TIMEOUT" env-required:"true"`
+	User        string        `yaml:"user" env:"YAUS_USER" env-required:"true"`
+	Password    string        `yaml:"password" env:"YAUS_PASSWORD" env-required:"true"`
 }
 
 const (
@@ -29,6 +31,8 @@ const (
 	DefaultAddress     = "localhost:8082"
 	DefaultTimeout     = 4 * time.Second
 	DefaultIdleTimeout = time.Minute
+	DefaultUser        = "user"
+	DefaultPassword    = "1234"
 )
 
 func MustLoad() Config {
@@ -54,6 +58,8 @@ func MustLoad() Config {
 				DefaultAddress,
 				DefaultTimeout,
 				DefaultIdleTimeout,
+				DefaultUser,
+				DefaultPassword,
 			},
 		}
 		yaml, err := yaml.Marshal(config)
