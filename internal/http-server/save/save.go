@@ -1,8 +1,78 @@
 package save
 
+import (
+	"errors"
+	"log/slog"
+	"net/http"
+	"yaus/internal/lib/logger/sl"
+	"yaus/internal/lib/responce"
+	"yaus/internal/storage"
+
+	"github.com/go-chi/chi/middleware"
+	"github.com/go-chi/render"
+	"github.com/go-playground/validator"
+)
+
 type Request struct {
 	URL   string `json:"url" validate:"required,url"`
-	Alias string `json:"alias,omitempty"`
+	Alias string `json:"alias" validate:"required,alias"`
 }
 
-type Responce struct{}
+type Responce struct {
+	responce.Responce
+	Alias string `json:"alias" validate:"required,alias"`
+}
+
+type URLSaver interface {
+	SaveURL(urlToSave string, alias string) (int64, error)
+}
+
+func New(log *slog.Logger, urlSaver URLSaver) http.HandleFunc {
+	return func(writer http.ResponseWriter, httpRequest *http.Request) {
+		const fnName = "url.save.New"
+
+		log = log.With(
+			slog.String("function", fnName),
+			slog.String("requiest_id", middleware.GetReqID(httpRequest.Context())),
+		)
+
+		var request Request
+
+		err := render.DecodeJSON(httpRequest.Body, &request)
+		if err != nil {
+			msg := "failed to decode request body"
+			log.Error(msg, sl.Err(err))
+
+			render.JSON(writer, httpRequest, responce.Error("failed to decode request"))
+
+			return
+		}
+
+		log.Info("request body decoded", slog.Any("request", request))
+
+		if err := validator.New().Struct(request); err != nil {
+			validateError := err.(validator.ValidationErrors)
+
+			log.Error("invalid request", sl.Err(err))
+
+			render.JSON(writer, httpRequest, responce.ValidationError(validateError))
+
+			return
+		}
+		id, err := urlSaver.SaveURL(request.URL, request.Alias)
+		if errors.Is(err, storage.ErrURLExists) {
+			log.Error("URL already exists", slog.String("url", request.URL))
+
+			render.JSON(writer, httpRequest, responce.Error("URL already exists"))
+
+			return
+		}
+		if err != nil {
+			log.Error("failed to add URL", sl.Err(err))
+
+			render.JSON(writer, httpRequest, responce.Error("failed to add URL"))
+
+			return
+		}
+	}
+}
