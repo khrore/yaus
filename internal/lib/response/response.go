@@ -1,4 +1,4 @@
-package responce
+package response
 
 import (
 	"fmt"
@@ -7,7 +7,7 @@ import (
 	"github.com/go-playground/validator"
 )
 
-type Responce struct {
+type Response struct {
 	Status string `json:"status"`
 	Error  string `json:"error,omitempty"`
 }
@@ -17,20 +17,20 @@ const (
 	StatusERROR = "Error"
 )
 
-func Ok() Responce {
-	return Responce{
+func Ok() Response {
+	return Response{
 		Status: StatusOK,
 	}
 }
 
-func Error(msg string) Responce {
-	return Responce{
+func Error(msg string) Response {
+	return Response{
 		Status: StatusERROR,
 		Error:  msg,
 	}
 }
 
-func ValidationError(errors validator.ValidationErrors) Responce {
+func ValidationError(errors validator.ValidationErrors) Response {
 	var errMsgs []string
 	for _, err := range errors {
 		switch err.ActualTag() {
@@ -45,7 +45,7 @@ func ValidationError(errors validator.ValidationErrors) Responce {
 		}
 	}
 
-	return Responce{
+	return Response{
 		Status: StatusERROR,
 		Error:  strings.Join(errMsgs, ", "),
 	}

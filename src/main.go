@@ -2,38 +2,32 @@ package main
 
 import (
 	"log/slog"
+	"net/http"
 	"os"
 	"yaus/internal/config"
-	mwLogger "yaus/internal/http-server/middleware/mvLogger"
-	"yaus/internal/lib/logger/sl"
+	mwLogger "yaus/internal/http-server/middleware/logger"
+	"yaus/internal/http-server/save"
+	"yaus/internal/lib/logger/slogext"
 	"yaus/internal/storage/sqlite"
 
 	"github.com/go-chi/chi/middleware"
 	"github.com/go-chi/chi/v5"
 )
 
-const (
-	envLocal = "local"
-	envDev   = "dev"
-	envProd  = "prod"
-)
-
 func main() {
 	cfg := config.MustLoad()
 
 	// logger
-	log := setupLogger(cfg.Env)
+	log := slogext.SetupLogger(cfg.Env)
 	log.Info("starting yaus", slog.String("env", cfg.Env))
 	log.Debug("debug messages are enabled")
 
 	// sqlite setup
 	db, err := sqlite.New(cfg.DBPath)
 	if err != nil {
-		log.Error("failed to init data base", sl.Err(err))
+		log.Error("failed to init data base", slogext.Err(err))
 		os.Exit(1)
 	}
-
-	_ = db
 
 	// router
 	router := chi.NewRouter()
@@ -43,37 +37,22 @@ func main() {
 	router.Use(middleware.Recoverer)
 	router.Use(middleware.URLFormat)
 
-	router.Route("/url", func(r chi.Router) {
-		r.Use(middleware.BasicAuth("yaus", map[string]string{
-			cfg.HTTPServer.User: cfg.HTTPServer.Password,
-		}))
-	})
-}
+	// start server
+	router.Post("/url", save.New(log, db))
 
-func setupLogger(env string) *slog.Logger {
-	var log *slog.Logger
-	switch env {
-	case envLocal:
-		log = setupPrettySlog()
-	case envDev:
-		log = slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelDebug}))
-	case envProd:
-		log = slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelInfo}))
-	default:
-		log = slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelInfo}))
-		log.Error("Invalid env variable in config! Expected local, dev or prod. Using prod config")
-	}
-	return log
-}
+	log.Info("starting server", slog.String("address", cfg.HTTPServer.Address))
 
-func setupPrettySlog() *slog.Logger {
-	opts := sl.PrettyHandlerOptions{
-		SlogOpts: &slog.HandlerOptions{
-			Level: slog.LevelDebug,
-		},
+	server := &http.Server{
+		Addr:         cfg.HTTPServer.Address,
+		Handler:      router,
+		ReadTimeout:  cfg.HTTPServer.Timeout,
+		WriteTimeout: cfg.HTTPServer.Timeout,
+		IdleTimeout:  cfg.HTTPServer.IdleTimeout,
 	}
 
-	handler := opts.NewPrettyLogger(os.Stdout)
+	if err := server.ListenAndServe(); err != nil {
+		log.Error("failed to start server")
+	}
 
-	return slog.New(handler)
+	log.Error("server stopped")
 }

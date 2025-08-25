@@ -54,23 +54,28 @@ func New(storagePath string) (*Storage, error) {
 	return &Storage{db}, nil
 }
 
-func (s *Storage) SaveURL(urlToSave string, alias string) error {
+func (s *Storage) SaveURL(urlToSave string, alias string) (int64, error) {
 	const fnName = "yaus.Storage.SaveURL"
 
 	stmt, err := s.db.Prepare("INSERT INTO url(url, alias) VALUES(?, ?)")
 	if err != nil {
-		return fmt.Errorf("%s: %s: %w", fnName, storage.FailedToCreateStatement, err)
+		return 0, fmt.Errorf("%s: %s: %w", fnName, storage.FailedToCreateStatement, err)
 	}
 
-	_, err = stmt.Exec(urlToSave, alias)
+	response, err := stmt.Exec(urlToSave, alias)
 	if err != nil {
 		if sqliteErr, ok := err.(sqlite3.Error); ok && sqliteErr.ExtendedCode == sqlite3.ErrConstraintUnique {
-			return fmt.Errorf("%s: cannot add two same url aliases: %w", fnName, storage.ErrURLExists)
+			return 0, fmt.Errorf("%s: cannot add two same url aliases: %w", fnName, storage.ErrURLExists)
 		}
-		return fmt.Errorf("%s: failed to insert statement to database: %w", fnName, err)
+		return 0, fmt.Errorf("%s: failed to insert statement to database: %w", fnName, err)
 	}
 
-	return nil
+	id, err := response.LastInsertId()
+	if err != nil {
+		return 0, fmt.Errorf("%s: failed to get last insert id: %w", fnName, err)
+	}
+
+	return id, nil
 }
 
 func (s *Storage) GetURL(alias string) (string, error) {
