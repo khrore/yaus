@@ -1,3 +1,4 @@
+// Package slogext is number of exetension for slog package in std lib
 package slogext
 
 import (
